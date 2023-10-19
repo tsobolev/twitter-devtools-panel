@@ -1,0 +1,28 @@
+{
+  "description": "Adds a new panel to the developer tools.",
+  "manifest_version": 3,
+  "name": "twitter-devtools-panel",
+  "version": "0.1",
+  "author": "Timofei Sobolev",
+  "homepage_url": "https://github.com/tsobolev/twitter-devtools-panel",
+  "icons": {
+    "48": "icons/star.png"
+  },
+  
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "twitter-devtools-panel@tsobolev.dev"
+    }
+  },
+  "background": {
+    "scripts": ["background_scripts/background.js"]
+  },
+  
+  "permissions": [
+      "devtools",
+      "activeTab"
+  ],
+  
+  "devtools_page": "devtools/devtools-page.html"
+
+}

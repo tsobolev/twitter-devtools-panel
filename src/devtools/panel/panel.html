@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+<style>
+.reply {
+  border:1px solid black;
+  padding:5px;
+  margin:5px;
+  background: #AAFFFF;
+}
+.module {
+  border:1px solid black;
+  padding:5px;
+  margin:5px;
+  background: #FFAAFF;
+}
+.unknown {
+  border:1px solid black;
+  padding:5px;
+  margin:5px;
+  background: #FFFFAA;
+}
+.only {
+  border: 2px solid red;
+}
+.debug {
+  background: #FFFFFF;
+  visibility: hidden;
+  display: none;
+}
+.spam {
+  background: #777777;
+}
+.path {
+  font-size:8px;
+}
+.value {
+  font-size:10px;
+}
+.bigvalue {
+  font-size:12px;
+}
+pre {
+    white-space: pre-wrap;
+}
+</style>
+  </head>
+  <body>
+    <button id="downloadAsJson">downloadAsJson</button>
+    <h3>respose-list</h3>
+    <div id="response-list"></div>
+
+    <script src="devtools-panel.js"></script>
+  </body>
+</html>
