@@ -87,68 +87,58 @@ function findValueByPath(obj, path) {
   return path.reduce((acc, key) => (acc && acc[key] ? acc[key] : null), obj);
 }
 
+const itemMapKeys = {
+  'tweet_results.result.core.user_results.result.legacy.screen_name':'user',
+  'tweet_results.result.legacy.full_text':'text',
+  'tweet_results.result.note_tweet.note_tweet_results.result.text':'text_note',
+  //'tweet_results.result.views.count':'text_views',
+  'tweet_results.result.legacy.created_at':'text_time',
+  'tweet_results.result.quoted_status_result.result.legacy.full_text':'quoted',
+  'tweet_results.result.quoted_status_result.result.note_tweet.note_tweet_results.result.text':'quoted_full',
+  'tweet_results.result.quoted_status_result.result.core.user_results.result.legacy.screen_name':'quoted_user',
+  'tweet_results.result.quoted_status_result.result.legacy.created_at':'quoted_time',
+  'tweet_results.result.legacy.in_reply_to_screen_name':'replay_to',
+  //retweet
+  'tweet_results.result.legacy.retweeted_status_result.result.core.user_results.result.legacy.screen_name':'retweet_from',
+  'tweet_results.result.legacy.retweeted_status_result.result.legacy.full_text':'retweet_text',
+  'tweet_results.result.legacy.retweeted_status_result.result.legacy.created_at':'retweet_time',
+  //tetweet quoted
+  'tweet_results.result.legacy.retweeted_status_result.result.quoted_status_result.result.legacy.full_text':'retweet_quoted',
+  'tweet_results.result.legacy.retweeted_status_result.result.quoted_status_result.result.legacy.created_at':'retweet_quoted_time',
+  'tweet_results.result.legacy.retweeted_status_result.result.quoted_status_result.result.core.user_results.result.legacy.screen_name':'retweet_quoted_user',
+}
+const counterMapKeys = {
+  'tweet_results.result.views.count':'text_views'
+}
 
 function extractDataFromItem(innerContent){
-  let item = {} 
+  let item = {}
+  let counter = {}
   const printObj = printJsonObj(innerContent)
   printObj.forEach((path) => {
-    if(path.join('.')  == 'tweet_results.result.core.user_results.result.legacy.screen_name'){
-      item['user'] = findValueByPath(innerContent,path)
+    let usefulItemKey = itemMapKeys[path.join('.')]
+    if(usefulItemKey){
+      item[usefulItemKey] = findValueByPath(innerContent,path)
     }
-    if(path.join('.') == 'tweet_results.result.legacy.full_text'){
-      item['text'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.note_tweet.note_tweet_results.result.text'){
-      item['text_note'] == findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.quoted_status_result.result.legacy.full_text'){
-      item['quoted'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.quoted_status_result.result.note_tweet.note_tweet_results.result.text'){
-      item['quoted_full'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.quoted_status_result.result.core.user_results.result.legacy.screen_name'){
-      item['quoted_user'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.legacy.created_at'){
-      item['text_time'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.quoted_status_result.result.legacy.created_at'){
-      item['quoted_time'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.legacy.in_reply_to_screen_name'){
-      item['replay_to'] = findValueByPath(innerContent,path)
-    }
-    // retweet 
-    if(path.join('.') == 'tweet_results.result.legacy.retweeted_status_result.result.core.user_results.result.legacy.screen_name'){
-      item['retweet_from'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.legacy.retweeted_status_result.result.legacy.full_text'){
-      item['retweet_text'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.legacy.retweeted_status_result.result.legacy.created_at'){
-      item['retweet_time'] = findValueByPath(innerContent,path)
-    }
-    // quoted text inside retweet 
-    if(path.join('.') == 'tweet_results.result.legacy.retweeted_status_result.result.quoted_status_result.result.legacy.full_text'){
-      item['retweet_quoted'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.legacy.retweeted_status_result.result.quoted_status_result.result.legacy.created_at'){
-      item['retweet_quoted_time'] = findValueByPath(innerContent,path)
-    }
-    if(path.join('.') == 'tweet_results.result.legacy.retweeted_status_result.result.quoted_status_result.result.core.user_results.result.legacy.screen_name'){
-      item['retweet_quoted_user'] = findValueByPath(innerContent,path)
+    let usefulCounterKey = counterMapKeys[path.join('.')]
+    if(usefulCounterKey){
+      counter[usefulCounterKey] = findValueByPath(innerContent,path)
     }
   })
-  return item
+  return {'item':item,'counter':counter}
 }
+
+
 
 function parseSingleReply(innerContent){
   const p = document.createElement('p')
   p.classList.add('reply')
   let module = []
+  let counters = []
   let key = 0
-  module[key] = extractDataFromItem(innerContent)
+  //module[key] = extractDataFromItem(innerContent)
+  const itemsWithCounters = extractDataFromItem(innerContent)
+  module[key] = itemsWithCounters['item']
   const HTML = prepareDebugOutput(innerContent)
   p.innerHTML = "<h3>single</h3>"+
   `<div class="only"><pre>${JSON.stringify(module,null,2)}</pre></div>`+
@@ -162,10 +152,14 @@ function parseMultiReply(items){
   p.classList.add('module')
   let HTML = ''
   let module = []
+  let counters = []
   for (const key in items){
     let innerContent = items[key].item.itemContent
     HTML += prepareDebugOutput(innerContent)
-    module[key] = extractDataFromItem(innerContent)
+    // module[key] = extractDataFromItem(innerContent)
+    const itemsWithCounters = extractDataFromItem(innerContent)
+    module[key] = itemsWithCounters['item']
+
   }
   p.innerHTML = `<h3>module</h3>`+
   `<div class="only"><pre>${JSON.stringify(module,null,2)}</pre></div>`+
