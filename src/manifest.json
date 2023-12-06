@@ -2,7 +2,7 @@
   "description": "Adds a new panel to the developer tools.",
   "manifest_version": 3,
   "name": "twitter-devtools-panel",
-  "version": "0.1",
+  "version": "0.1.1",
   "author": "Timofei Sobolev",
   "homepage_url": "https://github.com/tsobolev/twitter-devtools-panel",
   "icons": {
@@ -20,9 +20,13 @@
   
   "permissions": [
       "devtools",
-      "activeTab"
+      "activeTab",
+      "scripting",
+      "tabs",
+      "contextMenus"
   ],
-  
+
+
   "devtools_page": "devtools/devtools-page.html"
 
 }

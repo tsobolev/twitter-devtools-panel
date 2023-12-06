@@ -115,4 +115,22 @@ Listen for messages from our devtools panel.
 */
 browser.runtime.onMessage.addListener(handleMessage); 
 
+browser.contextMenus.create({
+  id: "scrollTab",
+  title: "Scroll Tab",
+});
+
+browser.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === "scrollTab") {
+    browser.tabs.query({ active: true, currentWindow: true }, async function (tabs) {
+      // console.log(tabs)
+      // Execute script to scroll the active tab
+      await browser.scripting.executeScript({
+				target: { tabId: tabs[0].id },
+				files: ['scroller.js']
+			});
+    });
+  }
+});
+
 

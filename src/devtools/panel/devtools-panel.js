@@ -3,7 +3,6 @@ browser.devtools.network.onRequestFinished.addListener(handleRequestFinished);
 
 const responseList = document.getElementById("response-list");
 const downloadButton = document.getElementById("downloadAsJson");
-const messagePattern = /[а-я] [а-я]/
 const database = []
 
 
@@ -19,8 +18,33 @@ function handleRequestFinished(request) {
       //ParseRawContent
       parsePacket(content)
     });
+  }else if(/SearchTimeline/.test(url)){
+     request.getContent().then(([content, mimeType]) => {
+      console.log("MIME type: ", mimeType);
+      // StoreRawContent 
+      //browser.runtime.sendMessage({ action: 'storeData', data: content });
+
+      //ParseRawContent
+      parseSearch(content)
+    });   
   }
 }
+
+function parseSearch(content){
+  const json = JSON.parse(content)
+  const instructions = json.data.search_by_raw_query.search_timeline.timeline.instructions
+  instructions.forEach((instruction)=>{
+    if(instruction.entries){
+      //database.push(...parseModules(instruction.entries))
+      const packet = parseModules(instruction.entries)
+      packet.forEach(data => {
+        browser.runtime.sendMessage({ action: 'storeData', data: data });
+      })
+    }
+  })
+
+}
+
 function parsePacket(content){
   const json = JSON.parse(content)
   // logPathesForPacket(json,messagePattern)
@@ -183,3 +207,22 @@ function triggerDownload(){
 }
 
 downloadButton.addEventListener("click", triggerDownload);
+function toggleDebug() {
+  var debugCheckbox = document.getElementById('debugToggle');
+  var debugClass = document.querySelector('.debug');
+  
+  // Check if the checkbox is checked
+  if (debugCheckbox.checked) {
+    console.log('visible')
+    debugClass.style.display = 'block';
+    debugClass.style.visibility = 'visible';
+  } else {
+    console.log('hide')
+    debugClass.style.display = 'none';
+    debugClass.style.visibility = 'hidden';
+  }
+}
+console.log('on page script loaded')
+// Attach the toggleDebug function to the checkbox's change event
+document.getElementById('debugToggle').addEventListener('change', toggleDebug);
+
