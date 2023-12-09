@@ -199,11 +199,51 @@ function parseUnknownReply(replyContent){
   `<div class="debug">${prepareDebugOutput(replyContent)}</div>`
   responseList.appendChild(p)
 }
+function getAllData(callback) {
+  const dbPromise = indexedDB.open('twitterLoggerDatabase');
+  dbPromise.onsuccess = event => {
+    const db = event.target.result;
+    const transaction = db.transaction('rawPacketsStore', 'readonly');
+    const objectStore = transaction.objectStore('rawPacketsStore');
+
+    const data = [];
+    objectStore.openCursor().onsuccess = event => {
+      const cursor = event.target.result;
+      if (cursor) {
+        data.push(cursor.value);
+        cursor.continue();
+      } else {
+        callback(data);
+      }
+    };
+  };
+}
+function downloadJsonFile(jsonData) {
+  const blob = new Blob([jsonData], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tweetDatabase.json';
+  a.style.display = 'none';
+
+  document.body.appendChild(a);
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 
 
 function triggerDownload(){
-  console.log('triggerDownload')
- browser.runtime.sendMessage({ action: 'download'});
+  console.log('triggerDownload_v2')
+ //browser.runtime.sendMessage({ action: 'download'});
+getAllData(data => {
+      const jsonData = JSON.stringify(data);
+
+      // Trigger the download
+      downloadJsonFile(jsonData);
+    });
+
 }
 
 downloadButton.addEventListener("click", triggerDownload);
