@@ -14,12 +14,17 @@ const rawBlocksStore = 'trueRawStore'
 
 function handleRequestFinished(request) {
   let url = request.request.url
+  const url_object = new URL(url)
+  const paramsObject = {};
+  url_object.searchParams.forEach((value, key) => {
+    paramsObject[key] = JSON.parse(value);
+  });
+
   if(/UserTweets/.test(url)){
     request.getContent().then(([content, mimeType]) => {
-      console.log("MIME type: ", mimeType);
       if(captureRawCheckbox.checked){
         printPacketStat(content,url)
-        browser.runtime.sendMessage({ action: 'storeRawData', data: content });
+        browser.runtime.sendMessage({ action: 'storeRawData', data: {content: JSON.parse(content), url: paramsObject } });
       }
       if(captureParsedCheckbox.checked){
         parsePacket(content)
@@ -27,10 +32,9 @@ function handleRequestFinished(request) {
     });
   }else if(/SearchTimeline/.test(url)){
     request.getContent().then(([content, mimeType]) => {
-      console.log("MIME type: ", mimeType);
       if(captureRawCheckbox.checked){
         printPacketStat(content,url)
-        browser.runtime.sendMessage({ action: 'storeRawData', data: content });
+        browser.runtime.sendMessage({ action: 'storeRawData', data: {content: JSON.parse(content), url: paramsObject } });
       }
       if(captureParsedCheckbox.checked){
         parseSearch(content)
