@@ -48,11 +48,23 @@ pre {
 </style>
   </head>
   <body>
-    <button id="downloadAsJson">downloadAsJson</button>
+    <button id="downloadAsJson">Download parsed</button>
+    <button id="downloadRawJson">Download raw</button>
     <label>
       <input type="checkbox" id="debugToggle"> Show/Hide Debug
     </label>
-    <h3>respose-list</h3>
+    <br>
+    <label>
+      <input type="checkbox" id="clearAfterDownload"> clearAfterDownload
+    </label>
+    <br>
+    <label>
+      <input type="checkbox" id="captureRaw"> captureRaw
+    </label>
+    <label>
+      <input type="checkbox" id="captureParsed"> captureParsed
+    </label>
+    <h3>response-list</h3>
     <div id="response-list"></div>
     <script src="devtools-panel.js"></script>
   </body>

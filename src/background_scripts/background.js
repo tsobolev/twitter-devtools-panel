@@ -1,33 +1,82 @@
 console.log('background started')
 
 // Open or create an IndexedDB database
-const dbPromise = indexedDB.open('twitterLoggerDatabase', 2);
+const databaseName = 'twitterLoggerDatabase'
+const parsedBlocksStore = 'rawPacketsStore'
+const rawBlocksStore = 'trueRawStore'
+// don't forget to increment version if structure has been changed
+const dbVersion = 6
+const dbPromise = indexedDB.open(databaseName, dbVersion);
 
-// Define the structure of your database (create object stores, etc.)
+// Define the structure of database
 dbPromise.onupgradeneeded = event => {
+  console.log('new version of database!')
   const db = event.target.result;
-  // db.createObjectStore('rawPacketsStore', { keyPath: 'id' });
-  db.createObjectStore('rawPacketsStore', {autoIncrement: true})
+  if(event.oldVersion < 2){
+    db.createObjectStore(parsedBlocksStore, {autoIncrement: true})
+  }
+  db.createObjectStore(rawBlocksStore, {autoIncrement: true})
 };
 
-
-/**
-When we receive the message, execute the given script in the given
-tab.
-*/
 function handleMessage(request, sender, sendResponse) {
   if (request.action === 'storeData') {
-    const data = request.data;
+    // generate Hash from data
+    generateHash(request.data).then(hash => {
+      // if hash is uniq, data will be appened to database
+      storeData(request.data,parsedBlocksStore,hash);
+    });
 
-    // Generate a hash for the data
-    generateHash(data).then(hash => {
-      // Open the IndexedDB database
-      const dbPromise = indexedDB.open('twitterLoggerDatabase');
+  }else if(request.action === 'storeRawData'){
+    // just put raw object to store
+    console.log('storeRawData request')
+    storeData(request.data,rawBlocksStore,false)
 
+  }else if(request.action == 'download'){
+    getAllData(data => {
+      const jsonData = JSON.stringify(data);
+
+      // Trigger the download
+      downloadJsonFile(jsonData);
+    });
+  }else{
+    // devtools panel
+    if (sender.url != browser.runtime.getURL("/devtools/panel/panel.html")) {
+      return;
+    }
+    /**
+    When we receive the message, execute the given script in the given
+    tab.
+    */
+    browser.tabs.executeScript(
+      request.tabId, 
+      {
+        code: request.script
+      });
+  }
+}
+
+function storeData(data,storage,hash){
+  // Generate a hash for the data
+  //generateHash(data).then(hash => {
+    // Open the IndexedDB database
+    const dbPromise = indexedDB.open(databaseName);
+    if(hash === false){
       dbPromise.onsuccess = event => {
         const db = event.target.result;
-        const transaction = db.transaction('rawPacketsStore', 'readwrite');
-        const objectStore = transaction.objectStore('rawPacketsStore');
+        const transaction = db.transaction(storage, 'readwrite');
+        const objectStore = transaction.objectStore(storage);
+
+        const request = objectStore.add(data);
+        console.log('rawPacket stored in DB')
+        transaction.oncomplete = () => {
+          console.log('transaction complete')
+        }
+      }
+    }else{
+      dbPromise.onsuccess = event => {
+        const db = event.target.result;
+        const transaction = db.transaction(storage, 'readwrite');
+        const objectStore = transaction.objectStore(storage);
 
         // Check if data with the same hash already exists
         const request = objectStore.getKey(hash);
@@ -43,29 +92,11 @@ function handleMessage(request, sender, sendResponse) {
         };
 
         transaction.oncomplete = () => {
-          console.log('oncomplete');
+          console.log('transaction complete');
         };
       };
-    });
-  }else if(request.action == 'download'){
-    getAllData(data => {
-      const jsonData = JSON.stringify(data);
-
-      // Trigger the download
-      downloadJsonFile(jsonData);
-    });
-  }else{
-    // devtools panel
-    if (sender.url != browser.runtime.getURL("/devtools/panel/panel.html")) {
-      return;
     }
-
-    browser.tabs.executeScript(
-      request.tabId, 
-      {
-        code: request.script
-      });
-  }
+  //});
 }
 
 async function generateHash(object) {
@@ -78,11 +109,11 @@ async function generateHash(object) {
 }
 
 function getAllData(callback) {
-  const dbPromise = indexedDB.open('twitterLoggerDatabase');
+  const dbPromise = indexedDB.open(databaseName);
   dbPromise.onsuccess = event => {
     const db = event.target.result;
-    const transaction = db.transaction('rawPacketsStore', 'readonly');
-    const objectStore = transaction.objectStore('rawPacketsStore');
+    const transaction = db.transaction(parsedBlocksStore, 'readonly');
+    const objectStore = transaction.objectStore(parsedBlocksStore);
 
     const data = [];
     objectStore.openCursor().onsuccess = event => {
@@ -96,6 +127,7 @@ function getAllData(callback) {
     };
   };
 }
+
 function downloadJsonFile(jsonData) {
   const blob = new Blob([jsonData], { type: 'application/json' });
   const url = URL.createObjectURL(blob);

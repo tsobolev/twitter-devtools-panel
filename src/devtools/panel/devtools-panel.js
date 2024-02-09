@@ -1,10 +1,15 @@
-//Log all requests
-browser.devtools.network.onRequestFinished.addListener(handleRequestFinished);
-
 const responseList = document.getElementById("response-list");
 const downloadButton = document.getElementById("downloadAsJson");
+const clearAfterDownloadCheckbox = document.getElementById("clearAfterDownload")
+const captureRawCheckbox = document.getElementById("captureRaw")
+const captureParsedCheckbox = document.getElementById("captureParsed")
+const downloadRawButton = document.getElementById("downloadRawJson")
+
 const database = []
 
+const databaseName = 'twitterLoggerDatabase'
+const parsedBlocksStore = 'rawPacketsStore'
+const rawBlocksStore = 'trueRawStore'
 
 
 function handleRequestFinished(request) {
@@ -12,20 +17,24 @@ function handleRequestFinished(request) {
   if(/UserTweets/.test(url)){
     request.getContent().then(([content, mimeType]) => {
       console.log("MIME type: ", mimeType);
-      // StoreRawContent 
-      //browser.runtime.sendMessage({ action: 'storeData', data: content });
-
-      //ParseRawContent
-      parsePacket(content)
+      if(captureRawCheckbox.checked){
+        printPacketStat(content,url)
+        browser.runtime.sendMessage({ action: 'storeRawData', data: content });
+      }
+      if(captureParsedCheckbox.checked){
+        parsePacket(content)
+      }
     });
   }else if(/SearchTimeline/.test(url)){
-     request.getContent().then(([content, mimeType]) => {
+    request.getContent().then(([content, mimeType]) => {
       console.log("MIME type: ", mimeType);
-      // StoreRawContent 
-      //browser.runtime.sendMessage({ action: 'storeData', data: content });
-
-      //ParseRawContent
-      parseSearch(content)
+      if(captureRawCheckbox.checked){
+        printPacketStat(content,url)
+        browser.runtime.sendMessage({ action: 'storeRawData', data: content });
+      }
+      if(captureParsedCheckbox.checked){
+        parseSearch(content)
+      }
     });   
   }
 }
@@ -61,6 +70,7 @@ function parsePacket(content){
   })
   console.log(database)
 }
+
 function parseModules(replies){
   let modules = []
   for(const key in replies){
@@ -78,6 +88,7 @@ function parseModules(replies){
   }
   return modules
 }
+
 function printJsonObj(obj, currentPath = [], alphaPaths = []) {
   for (const key in obj) {
     if (typeof obj[key] === 'object' || Array.isArray(obj[key])) {
@@ -131,6 +142,7 @@ const itemMapKeys = {
   'tweet_results.result.legacy.retweeted_status_result.result.quoted_status_result.result.legacy.created_at':'retweet_quoted_time',
   'tweet_results.result.legacy.retweeted_status_result.result.quoted_status_result.result.core.user_results.result.legacy.screen_name':'retweet_quoted_user',
 }
+
 const counterMapKeys = {
   'tweet_results.result.views.count':'text_views'
 }
@@ -151,8 +163,6 @@ function extractDataFromItem(innerContent){
   })
   return {'item':item,'counter':counter}
 }
-
-
 
 function parseSingleReply(innerContent){
   const p = document.createElement('p')
@@ -199,12 +209,25 @@ function parseUnknownReply(replyContent){
   `<div class="debug">${prepareDebugOutput(replyContent)}</div>`
   responseList.appendChild(p)
 }
-function getAllData(callback) {
-  const dbPromise = indexedDB.open('twitterLoggerDatabase');
+
+function printPacketStat(packet,url){
+  console.log(url)
+  const p = document.createElement('p')
+  p.classList.add('unknown')
+  p.innerHTML = "<h3>DataPacket</h3>"+
+  decodeURI(url)+
+  `<div class="debug">${Object.keys(packet).length}</div>`
+  responseList.appendChild(p)
+}
+
+function getAllData(callback, storage, isClearFlag) {
+  const dbPromise = indexedDB.open(databaseName);
   dbPromise.onsuccess = event => {
+    console.log('isClearFlag',isClearFlag)
+
     const db = event.target.result;
-    const transaction = db.transaction('rawPacketsStore', 'readonly');
-    const objectStore = transaction.objectStore('rawPacketsStore');
+    const transaction = db.transaction(storage, 'readwrite');
+    const objectStore = transaction.objectStore(storage);
 
     const data = [];
     objectStore.openCursor().onsuccess = event => {
@@ -214,17 +237,27 @@ function getAllData(callback) {
         cursor.continue();
       } else {
         callback(data);
+        if(isClearFlag){
+          // Make a request to clear all the data out of the object store
+          const objectStoreRequest = objectStore.clear();
+
+          objectStoreRequest.onsuccess = (event) => {
+            // report the success of our request
+            console.log("Storage cleared by BKGND successfully")
+          }
+        }
       }
     };
   };
 }
-function downloadJsonFile(jsonData) {
+
+function downloadJsonFile(jsonData, filename) {
   const blob = new Blob([jsonData], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'tweetDatabase.json';
+  a.download = filename;
   a.style.display = 'none';
 
   document.body.appendChild(a);
@@ -233,20 +266,27 @@ function downloadJsonFile(jsonData) {
   URL.revokeObjectURL(url);
 }
 
+function downloadParsedJson(){
+  console.log('downloadParsedJson')
+  //browser.runtime.sendMessage({ action: 'download'});
+  getAllData(data => {
+    const jsonData = JSON.stringify(data);
 
-function triggerDownload(){
-  console.log('triggerDownload_v2')
- //browser.runtime.sendMessage({ action: 'download'});
-getAllData(data => {
-      const jsonData = JSON.stringify(data);
+    // Trigger the download
+    downloadJsonFile(jsonData,'parsedjson.json');
+  }, parsedBlocksStore, clearAfterDownloadCheckbox.checked);
+}
+function downloadRawJson(){
+  console.log('downloadRawJson')
+  //browser.runtime.sendMessage({ action: 'download'});
+  getAllData(data => {
+    const jsonData = JSON.stringify(data);
 
-      // Trigger the download
-      downloadJsonFile(jsonData);
-    });
-
+    // Trigger the download
+    downloadJsonFile(jsonData,'rawjson.json');
+  }, rawBlocksStore, clearAfterDownloadCheckbox.checked);
 }
 
-downloadButton.addEventListener("click", triggerDownload);
 function toggleDebug() {
   var debugCheckbox = document.getElementById('debugToggle');
   var debugClass = document.querySelector('.debug');
@@ -262,7 +302,32 @@ function toggleDebug() {
     debugClass.style.visibility = 'hidden';
   }
 }
+
 console.log('on page script loaded')
 // Attach the toggleDebug function to the checkbox's change event
 document.getElementById('debugToggle').addEventListener('change', toggleDebug);
+downloadButton.addEventListener("click", downloadParsedJson);
+downloadRawButton.addEventListener("click", downloadRawJson);
 
+// Retrieve the saved state from storage
+browser.storage.sync.get("captureRawState", (result) => {
+  if (result.captureRawState) {
+    captureRawCheckbox.checked = result.captureRawState;
+  }
+});
+browser.storage.sync.get("captureParsedState", (result) => {
+  if (result.captureParsedState) {
+    captureParsedCheckbox.checked = result.captureParsedState;
+  }
+});
+
+// Save the checkbox state when it changes
+captureRawCheckbox.addEventListener("change", () => {
+  browser.storage.sync.set({ "captureRawState": captureRawCheckbox.checked });
+});
+captureParsedCheckbox.addEventListener("change", () => {
+  browser.storage.sync.set({ "captureParsedState": captureParsedCheckbox.checked});
+});
+
+//Log all requests
+browser.devtools.network.onRequestFinished.addListener(handleRequestFinished);

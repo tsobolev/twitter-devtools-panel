@@ -4,4 +4,4 @@ Plugin allow to download all viewed replies as single json file. Works only then
 
 # install 
 
-To build .xpi from src run: cd src; zip -r ../asrdataset.xpi * Extension can be installed to Firefox-developer-edition (about:config xpinstall.signatures.required=False)
+To build .xpi from src run: cd src; zip -r ../twitter-devtools-panel.xpi * Extension can be installed to Firefox-developer-edition (about:config xpinstall.signatures.required=False)
