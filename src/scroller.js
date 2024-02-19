@@ -11,6 +11,7 @@ function getRandomInteger(min, max) {
 
 function randomScroll() {
   if(endReached){
+    endReached = false
     return
   }
   const sequence = scrollerSequences[getRandomInteger(0,scrollerSequences.length - 1)]
@@ -39,5 +40,14 @@ function randomScroll() {
   }, getRandomInteger(temp*0.9,temp*1.1));
 }
 
-randomScroll();
+function handleMessage(request, sender, sendResponse) {
+  if (request.action === 'scrollToEnd') {
+    console.log('scrollToEnd message')
+    temp = request.wheelDelay
+    randomScroll();
+  }else{
+    console.log('another message')
+  }
+} 
 
+browser.runtime.onMessage.addListener(handleMessage);

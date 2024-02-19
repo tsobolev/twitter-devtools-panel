@@ -4,6 +4,7 @@ const clearAfterDownloadCheckbox = document.getElementById("clearAfterDownload")
 const captureRawCheckbox = document.getElementById("captureRaw")
 const captureParsedCheckbox = document.getElementById("captureParsed")
 const downloadRawButton = document.getElementById("downloadRawJson")
+const wheelDelayInput = document.getElementById("wheelDelayInput")
 
 const database = []
 
@@ -324,7 +325,11 @@ browser.storage.sync.get("captureParsedState", (result) => {
     captureParsedCheckbox.checked = result.captureParsedState;
   }
 });
-
+browser.storage.sync.get("wheelDelayInput", (result) => {
+  if (result.wheelDelayInput) {
+    wheelDelayInput.value = result.wheelDelayInput;
+  }
+})
 // Save the checkbox state when it changes
 captureRawCheckbox.addEventListener("change", () => {
   browser.storage.sync.set({ "captureRawState": captureRawCheckbox.checked });
@@ -332,6 +337,8 @@ captureRawCheckbox.addEventListener("change", () => {
 captureParsedCheckbox.addEventListener("change", () => {
   browser.storage.sync.set({ "captureParsedState": captureParsedCheckbox.checked});
 });
-
+wheelDelayInput.addEventListener("change", () => {
+  browser.storage.sync.set({ "wheelDelayInput": wheelDelayInput.value})
+})
 //Log all requests
 browser.devtools.network.onRequestFinished.addListener(handleRequestFinished);

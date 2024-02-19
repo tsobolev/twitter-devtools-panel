@@ -150,17 +150,33 @@ browser.runtime.onMessage.addListener(handleMessage);
 browser.contextMenus.create({
   id: "scrollTab",
   title: "Scroll Tab",
+  contexts: ["all"]
 });
+
 
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "scrollTab") {
     browser.tabs.query({ active: true, currentWindow: true }, async function (tabs) {
       // console.log(tabs)
       // Execute script to scroll the active tab
-      await browser.scripting.executeScript({
-				target: { tabId: tabs[0].id },
-				files: ['scroller.js']
-			});
+        try{
+          const injectResult = await browser.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            files: ['scroller.js']
+          });
+          console.log('inject success',injectResult)
+        }catch{
+          console.log('inject error')
+        }
+      browser.storage.sync.get("wheelDelayInput", (result) => {
+        if (result.wheelDelayInput) {
+          //wheelDelayInput.value = result.wheelDelayInput;
+          browser.tabs.sendMessage(tabs[0].id, { action: "scrollToEnd", wheelDelay: result.wheelDelayInput });
+        }else{
+          browser.tabs.sendMessage(tabs[0].id, { action: "scrollToEnd", wheelDelay: 700 });
+        }
+      })
+
     });
   }
 });
